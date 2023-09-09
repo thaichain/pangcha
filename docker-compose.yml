@@ -1,0 +1,52 @@
+version: '3.4'
+
+services:
+  geth:
+    build:
+      context: ./geth
+      dockerfile: Dockerfile.geth
+    ports:
+      - '8545:8545'
+      - '8551:8551'
+      - 0.0.0.0:${EL_P2P_PORT:-30303}:${EL_P2P_PORT:-30303}/tcp
+      - 0.0.0.0:${EL_P2P_PORT:-30303}:${EL_P2P_PORT:-30303}/udp
+    environment:
+      - EL_P2P_PORT=${EL_P2P_PORT:-30303}
+    command: /usr/local/bin/geth.sh
+    volumes:
+      - './geth_data:/db'
+      - type: bind
+        source: ./geth/geth.sh
+        target: /usr/local/bin/geth.sh
+      - type: bind
+        source: ./geth/jwtsecret
+        target: /config/jwtsecret
+      - type: bind
+        source: ./geth/genesis.json
+        target: /config/genesis.json
+
+  lighthouse:
+    build:
+      context: ./lighthouse
+      dockerfile: Dockerfile.lighthouse
+    environment:
+      - CL_P2P_PORT=${CL_P2P_PORT:-9000}
+      - CL_LOG_LEVEL=${CL_LOG_LEVEL:-info}
+      - CHECKPOINT_SYNC_URL=${CHECKPOINT_SYNC_URL}
+    ports:
+      - "8000:8000"
+      - "5054:5054"
+      - 0.0.0.0:${CL_P2P_PORT:-9000}:${CL_P2P_PORT:-9000}/tcp
+      - 0.0.0.0:${CL_P2P_PORT:-9000}:${CL_P2P_PORT:-9000}/udp
+    command: /usr/local/bin/lighthouse.sh
+    volumes:
+      - ./lighthouse_data:/data
+      - type: bind
+        source: ./lighthouse/lighthouse.sh
+        target: /usr/local/bin/lighthouse.sh
+      - type: bind
+        source: ./cl_config
+        target: /config/testnet
+      - type: bind
+        source: ./geth/jwtsecret
+        target: /config/jwtsecret
